@@ -10,11 +10,13 @@
 
 <body>
     <!-- <script src="/main.js"></script> -->
-    <script src="/functions.js"></script>
+    <!-- <script src="/functions.js"></script> -->
+    <script src="/functions1.js"></script>
     <h1>My DASH Streamer</h1>
+    <video id="video" width="720" height="480" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
     <button id="startBtn">Record</button>
     <button id="stopBtn" disabled>Stop</button>
-    <!-- <video></video> -->
     <script>
         navigator.mediaDevices.enumerateDevices().then((devices) => {
             devices.forEach((device) => {
