@@ -2,18 +2,70 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DASH Media Streamer and Capture</title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediaRecorder Streamer and Capture</title>
 </head>
 
 <body>
-    <h1>My DASH Streamer</h1>
-    <video id="video" width="720" height="480" autoplay controls></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <button id="startBtn">Record</button>
-    <button id="stopBtn" disabled>Stop</button>
-    <script src="/main.js"></script>
+  <h1>My MediaRecorder Streamer</h1>
+  <video id="video" width="720" height="480"></video>
+  <button id="startBtn">Record</button>
+  <button id="stopBtn" disabled>Stop</button>
+
+  <script>
+    const videoElement = document.getElementById("video");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    startBtn.addEventListener("click", async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoElement.srcObject = stream;
+        await videoElement.play();
+
+        recordedChunks = [];
+        const options = { mimeType: 'video/webm; codecs=vp9' };
+        mediaRecorder = new MediaRecorder(stream, options);
+
+        mediaRecorder.addEventListener("dataavailable", (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        });
+
+        mediaRecorder.addEventListener("stop", () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "recording.webm";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          recordedChunks = [];
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        });
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    stopBtn.addEventListener("click", () => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+      }
+    });
+  </script>
 </body>
+
 </html>
