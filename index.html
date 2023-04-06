@@ -11,6 +11,7 @@
 <body>
   <h1>My MediaRecorder Streamer</h1>
   <video id="video" width="720" height="480"></video>
+  <span id="time">00:00</span>
   <button id="startBtn">Record</button>
   <button id="stopBtn" disabled>Stop</button>
 
@@ -20,6 +21,8 @@
     const stopBtn = document.getElementById("stopBtn");
     let mediaRecorder;
     let recordedChunks = [];
+    let seconds = 0;
+    let timerInterval;
 
     startBtn.addEventListener("click", async () => {
       try {
@@ -38,6 +41,8 @@
         });
 
         mediaRecorder.addEventListener("stop", () => {
+          clearInterval(timerInterval); // Stop the timer
+          videoElement.pause(); // Pause the video stream
           const blob = new Blob(recordedChunks, { type: 'video/webm' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
@@ -51,6 +56,16 @@
           stopBtn.disabled = true;
         });
 
+        // Start the timer
+        seconds = 0;
+        timerInterval = setInterval(() => {
+          seconds++;
+          const minutes = Math.floor(seconds / 60);
+          const remainingSeconds = seconds % 60;
+          const timeString = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+          document.getElementById('time').textContent = timeString;
+        }, 1000);
+
         mediaRecorder.start();
         startBtn.disabled = true;
         stopBtn.disabled = false;
@@ -61,6 +76,8 @@
 
     stopBtn.addEventListener("click", () => {
       if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        clearInterval(timerInterval); // Stop the timer
+        videoElement.pause(); // Pause the video stream
         mediaRecorder.stop();
         videoElement.srcObject.getTracks().forEach(track => track.stop());
       }
