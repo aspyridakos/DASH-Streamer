@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@ffmpeg/core": "^0.11.0",
+    "@ffmpeg/ffmpeg": "^0.11.6",
     "mp4frag": "^0.6.0"
   }
 }
