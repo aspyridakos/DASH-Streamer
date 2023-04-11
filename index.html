@@ -2,102 +2,102 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MediaRecorder Streamer and Capture</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaRecorder Streamer and Capture</title>
 </head>
 
 <body>
-  <h1 style="text-align: center">My MediaRecorder Streamer</h1>
-  <div style="display: flex;
+<h1 style="text-align: center">DASH Streamer</h1>
+<div style="display: flex;
   justify-content: center;
   align-items: center;">
-  <video id="video" alignItems="center" width="720" height="480"></video>
-  </div>
-  <div style="display: flex;
+    <video id="video" alignItems="center" width="720" height="480"></video>
+</div>
+<div style="display: flex;
   justify-content: center;
   align-items: center;">
     <p text-align='center' id="time">00:00</p>
-  </div>
-  <div style="display: flex;
+</div>
+<div style="display: flex;
   justify-content: center;
   align-items: center;">
     <button style="margin:5px" id="startBtn">Record</button>
     <button style="margin:5px" id="stopBtn" disabled>Stop</button>
-  </div>
-  </div>
+</div>
 </body>
 
 
 <script>
-  const videoElement = document.getElementById("video");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  let mediaRecorder;
-  let recordedChunks = [];
-  let seconds = 0;
-  let timerInterval;
+    const videoElement = document.getElementById("video");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    let mediaRecorder;
+    let recordedChunks = [];
+    let seconds = 0;
+    let timerInterval;
 
-  startBtn.addEventListener("click", async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoElement.srcObject = stream;
-      await videoElement.play();
+    startBtn.addEventListener("click", async () => {
+        try {
+            let constraints = {
+                audio: true,
+                video: {width: 1280, height: 720, frameRate: 30}
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            videoElement.srcObject = stream;
+            await videoElement.play();
 
-      recordedChunks = [];
-      const options = { mimeType: 'video/webm; codecs=vp9' };
-      mediaRecorder = new MediaRecorder(stream, options);
+            recordedChunks = [];
+            const options = {mimeType: 'video/webm; codecs=vp9'};
+            mediaRecorder = new MediaRecorder(stream, options);
 
-      mediaRecorder.addEventListener("dataavailable", (event) => {
-        if (event.data.size > 0) {
-          recordedChunks.push(event.data);
+            mediaRecorder.addEventListener("dataavailable", (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            });
+
+            mediaRecorder.addEventListener("stop", () => {
+                clearInterval(timerInterval); // Stop the timer
+                videoElement.pause(); // Pause the video stream
+                const blob = new Blob(recordedChunks, {type: 'video/webm'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "recording.webm";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                recordedChunks = [];
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            });
+
+            // Start the timer
+            seconds = 0;
+            timerInterval = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                document.getElementById('time').textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+            }, 1000);
+
+            mediaRecorder.start();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+        } catch (error) {
+            console.error(error);
         }
-      });
+    });
 
-      mediaRecorder.addEventListener("stop", () => {
-        clearInterval(timerInterval); // Stop the timer
-        videoElement.pause(); // Pause the video stream
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "recording.webm";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        recordedChunks = [];
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      });
-
-      // Start the timer
-      seconds = 0;
-      timerInterval = setInterval(() => {
-        seconds++;
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        const timeString = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-        document.getElementById('time').textContent = timeString;
-      }, 1000);
-
-      mediaRecorder.start();
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-    } catch (error) {
-      console.error(error);
-    }
-  });
-
-  stopBtn.addEventListener("click", () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      clearInterval(timerInterval); // Stop the timer
-      videoElement.pause(); // Pause the video stream
-      mediaRecorder.stop();
-      videoElement.srcObject.getTracks().forEach(track => track.stop());
-    }
-  });
+    stopBtn.addEventListener("click", () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            clearInterval(timerInterval); // Stop the timer
+            videoElement.pause(); // Pause the video stream
+            mediaRecorder.stop();
+            videoElement.srcObject.getTracks().forEach(track => track.stop());
+        }
+    });
 </script>
-</body>
-
 </html>
