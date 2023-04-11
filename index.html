@@ -14,6 +14,7 @@
   justify-content: center;
   align-items: center;">
     <video id="video" alignItems="center" width="720" height="480"></video>
+<!--    <canvas alignItems="center" width="720" height="480"></canvas>-->
 </div>
 <div style="display: flex;
   justify-content: center;
@@ -49,7 +50,7 @@
             await videoElement.play();
 
             recordedChunks = [];
-            const options = {mimeType: 'video/webm; codecs=vp9'};
+            const options = {mimeType: 'video/webm; codecs=avc1.424028', bitsPerSecond:5000000};
             mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorder.addEventListener("dataavailable", (event) => {
@@ -61,11 +62,11 @@
             mediaRecorder.addEventListener("stop", () => {
                 clearInterval(timerInterval); // Stop the timer
                 videoElement.pause(); // Pause the video stream
-                const blob = new Blob(recordedChunks, {type: 'video/webm'});
+                const blob = new Blob(recordedChunks, {type: 'video/mp4; codecs=avc1.424028'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = "recording.webm";
+                a.download = "recording.mp4";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
