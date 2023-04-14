@@ -1,34 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>MediaRecorder Streamer and Capture</title>
 </head>
+<style>
+    body {
+        background-color: #f8f8f8;
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #333;
+    }
+
+    h1 {
+        font-size: 36px;
+        margin-top: 50px;
+        margin-bottom: 20px;
+        text-align: center;
+        text-transform: uppercase;
+        color: #ff5500;
+    }
+
+    video {
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 0 10px #ddd;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    p {
+        font-size: 24px;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        text-align: center;
+        color: #666;
+    }
+
+    button {
+        background-color: #ff5500;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-size: 18px;
+        cursor: pointer;
+        box-shadow: 0 0 10px #ddd;
+        transition: all 0.3s ease;
+    }
+
+    button:hover {
+        background-color: #f00;
+        box-shadow: 0 0 20px #f00;
+    }
+
+    button:hover:disabled {
+        box-shadow: none;
+    }
+
+    button:disabled {
+        background-color: rgb(134, 134, 134);
+    }
+</style>
 
 <body>
 <h1 style="text-align: center">DASH Streamer</h1>
-<div style="display: flex;
-  justify-content: center;
-  align-items: center;">
-    <video id="video" alignItems="center" width="720" height="480"></video>
-<!--    <canvas alignItems="center" width="720" height="480"></canvas>-->
+<p>Video stream capture and WebM to MP4 converter and video segmentation</p>
+<div style="display: flex; justify-content: center">
+    <video id="video" controls></video>
 </div>
-<div style="display: flex;
-  justify-content: center;
-  align-items: center;">
-    <p text-align='center' id="time">00:00</p>
-</div>
-<div style="display: flex;
-  justify-content: center;
-  align-items: center;">
-    <button style="margin:5px" id="startBtn">Record</button>
-    <button style="margin:5px" id="stopBtn" disabled>Stop</button>
+<div style="display: flex; justify-content: center">
+    <button style="margin: 5px" id="startBtn">Record</button>
+    <button style="margin: 5px" id="stopBtn" disabled>Stop</button>
 </div>
 </body>
-
 
 <script>
     const videoElement = document.getElementById("video");
@@ -36,37 +84,50 @@
     const stopBtn = document.getElementById("stopBtn");
     let mediaRecorder;
     let recordedChunks = [];
-    let seconds = 0;
-    let timerInterval;
 
     startBtn.addEventListener("click", async () => {
         try {
+            // Setting video stream to 720p at 30fps
             let constraints = {
                 audio: true,
-                video: {width: 1280, height: 720, frameRate: 30}
+                video: {width: 1280, height: 720, frameRate: 30},
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             videoElement.srcObject = stream;
             await videoElement.play();
 
             recordedChunks = [];
-            const options = {mimeType: 'video/webm; codecs=avc1.424028', bitsPerSecond:5000000};
+            // Encoding frames to H.264 encoding with 5Mbps bitrate
+            const options = {
+                mimeType: "video/webm; codecs=h264",
+                videoBitsPerSecond: 5000000,
+            };
             mediaRecorder = new MediaRecorder(stream, options);
 
-            mediaRecorder.addEventListener("dataavailable", (event) => {
+            mediaRecorder.addEventListener("dataavailable", async (event) => {
                 if (event.data.size > 0) {
                     recordedChunks.push(event.data);
+                    const formData = new FormData();
+                    formData.append("video", event.data, "recording.webm");
+                    const response = await fetch(
+                        "http://localhost:8080/comp445_lab2/index.html",
+                        {
+                            body: formData,
+                            method: "POST",
+                            mode: "no-cors",
+                        }
+                    );
+                    console.log(response);
                 }
             });
 
             mediaRecorder.addEventListener("stop", () => {
-                clearInterval(timerInterval); // Stop the timer
-                videoElement.pause(); // Pause the video stream
-                const blob = new Blob(recordedChunks, {type: 'video/mp4; codecs=avc1.424028'});
+                videoElement.pause();
+                const blob = new Blob(recordedChunks, {type: "video/webm"});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = "recording.mp4";
+                a.download = "recording.webm";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -74,15 +135,6 @@
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
             });
-
-            // Start the timer
-            seconds = 0;
-            timerInterval = setInterval(() => {
-                seconds++;
-                const minutes = Math.floor(seconds / 60);
-                const remainingSeconds = seconds % 60;
-                document.getElementById('time').textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-            }, 1000);
 
             mediaRecorder.start();
             startBtn.disabled = true;
@@ -94,10 +146,9 @@
 
     stopBtn.addEventListener("click", () => {
         if (mediaRecorder && mediaRecorder.state !== "inactive") {
-            clearInterval(timerInterval); // Stop the timer
-            videoElement.pause(); // Pause the video stream
+            videoElement.pause();
             mediaRecorder.stop();
-            videoElement.srcObject.getTracks().forEach(track => track.stop());
+            videoElement.srcObject.getTracks().forEach((track) => track.stop());
         }
     });
 </script>
